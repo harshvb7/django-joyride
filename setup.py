@@ -35,7 +35,8 @@ setup(
     zip_safe=False,
     install_requires=[
         'django-positions>=0.5.0',
-        'Django>=1.4.3'
+        'Django>=1.4.3',
+        'django-ckeditor==5.0.3'
     ],
     package_data={'joyride': ['templates/joyride/*.html'] +
                   _static_files('static')}

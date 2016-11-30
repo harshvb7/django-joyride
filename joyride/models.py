@@ -11,6 +11,8 @@ from positions.fields import PositionField
 
 from .settings import USER_MODEL
 
+from ckeditor.fields import RichTextField
+
 
 class JoyRideManager(models.Manager):
     def get_joyrides(self, url_path=None, for_user=None, exclude_viewed=True):
@@ -27,7 +29,7 @@ class JoyRideManager(models.Manager):
         if url_path is not None:
             qs = qs.filter(url_path__regex=r'^%s$' % url_path)
         return qs
-    
+
     def get_joyride(self, slug, url_path=None, for_user=None, viewed=False):
         try:
             qs = super(JoyRideManager, self).get_query_set()
@@ -51,7 +53,7 @@ class JoyRide(models.Model):
         verbose_name = _('Joy Ride')
         verbose_name_plural = _('Joy Rides')
         ordering = ['-created']
-    
+
     TIP_LOCATION_TOP = 'top'
     TIP_LOCATION_BOTTOM = 'bottom'
     TIP_LOCATION_RIGHT = 'right'
@@ -62,14 +64,14 @@ class JoyRide(models.Model):
         (TIP_LOCATION_RIGHT, _('right')),
         (TIP_LOCATION_LEFT, _('left')),
     )
-    
+
     TIP_ANIMATION_POP = 'pop'
     TIP_ANIMATION_FADE = 'fade'
     TIP_ANIMATION_CHOICES = (
         (TIP_ANIMATION_POP, _('pop')),
         (TIP_ANIMATION_FADE, _('fade')),
     )
-    
+
     name = models.CharField(
         _('Joy Ride Name'),
         max_length=50,
@@ -231,9 +233,9 @@ class JoyRide(models.Model):
         default=timezone.now,
         help_text=_('Date and Time of when created'),
     )
-    
+
     objects = JoyRideManager()
-    
+
     @property
     def properties(self):
         j = serializers.serialize('json', [self])
@@ -248,24 +250,24 @@ class JoyRide(models.Model):
         cookie_path = j.pop('cookiePath')
         if not cookie_path:
             cookie_path = False
-        
+
         j.update({'cookieDomain': cookie_domain, 'cookiePath': cookie_path})
         d = {}
         for key, val in j.items():
             if val != '':
                 d[key] = val
         return json.dumps(d)
-    
+
     def clean(self):
         if self.showJoyRideElement and not self.showJoyRideElementOn:
             raise ValidationError(_('showJoyRideElementOn field is required if showJoyRideElement is given'))
         super(JoyRide, self).clean()
-        
+
     def save(self, *args, **kwargs):
         if not self.id:
             self.slug = slugify(self.name)
         super(JoyRide, self).save(*args, **kwargs)
-    
+
     def __unicode__(self):
         return self.name
 
@@ -275,9 +277,9 @@ class JoyRideSteps(models.Model):
         verbose_name = _('Joy Ride Step')
         verbose_name_plural = _('Joy Ride Steps')
         ordering = ['position', ]
-    
+
     joyride = models.ForeignKey(JoyRide, related_name='steps')
-    
+
     header = models.CharField(
         _('Step Header'),
         max_length=255,
@@ -285,18 +287,17 @@ class JoyRideSteps(models.Model):
         blank=True,
         help_text=_('The step header conent'),
     )
-    
-    content = models.TextField(
+
+    content = RichTextField(
         _('Step Content'),
-        max_length=255,
         help_text=_('The content for step, can be valid html'),
     )
-    
+
     button = models.CharField(
         max_length=50,
         default='Next',
     )
-    
+
     attachId = models.CharField(
         'data-id',
         max_length=100,
@@ -304,7 +305,7 @@ class JoyRideSteps(models.Model):
         blank=True,
         help_text=_('Attach this step to particular dom element by id')
     )
-    
+
     attachClass = models.CharField(
         'data-class',
         max_length=100,
@@ -312,7 +313,7 @@ class JoyRideSteps(models.Model):
         blank=True,
         help_text=_('Attach this step to particular dom element by class')
     )
-    
+
     options = models.CharField(
         _('Options'),
         max_length=255,
@@ -327,14 +328,14 @@ class JoyRideSteps(models.Model):
         blank=True,
         help_text=_('A custom css class name for tip'),
     )
-    
+
     position = PositionField(collection='joyride', default=0)
-    
+
     def clean(self):
         if (self.attachId and self.attachClass) or (not self.attachId and not self.attachClass):
             raise ValidationError(_('Either provide data-id or data-class'))
         super(JoyRideSteps, self).clean()
-    
+
     def __unicode__(self):
         return self.header or self.content[:20]
 
@@ -344,7 +345,7 @@ class JoyRideHistory(models.Model):
         verbose_name = _('Joy Ride History')
         ordering = ['created', ]
         unique_together = ('joyride', 'user')
-    
+
     joyride = models.ForeignKey(JoyRide, related_name='views')
     user = models.ForeignKey(USER_MODEL, related_name='joyrides')
     viewed = models.BooleanField(default=True)
